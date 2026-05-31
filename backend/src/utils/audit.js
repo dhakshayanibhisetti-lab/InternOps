@@ -18,4 +18,11 @@ async function createAuditLog({ userId, action, resourceType, resourceId, detail
   );
 }
 
-module.exports = { createAuditLog };
+function extractRequestInfo(request) {
+  return {
+    ipAddress: request.ip,
+    userAgent: request.headers['user-agent'],
+  };
+}
+
+module.exports = { createAuditLog, extractRequestInfo };
