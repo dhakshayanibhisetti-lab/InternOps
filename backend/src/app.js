@@ -36,11 +36,11 @@ app.register(async function sanitizationPlugin(instance, opts) {
 });
 
 // Rate limiter
-app.register(require('@fastify/rate-limit'), { max: 100, timeWindow: '1 minute' });
+app.register(require('@fastify/rate-limit'), { max: 1000, timeWindow: '1 minute' });
 app.register(require('@fastify/rate-limit'), {
   max: 5, timeWindow: '1 minute',
   keyGenerator: (request) => request.ip + '_auth',
-  onExceeded: (request, reply) => reply.status(429).send({ error: 'Too many requests' }),
+  onExceeded: (request, reply) => reply.code(429).send({ error: 'Too many requests' }),
   prefix: '/api/auth',
 });
 
