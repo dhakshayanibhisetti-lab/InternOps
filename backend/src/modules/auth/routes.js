@@ -25,7 +25,7 @@ async function routes(fastify) {
     const { email, password } = z.object({ email: z.string().email(), password: z.string() }).parse(req.body);
     const result = await service.login(email, password, req.ip, req.headers['user-agent']);
     reply.setCookie('refreshToken', result.refreshToken, { httpOnly: true, secure: false, sameSite: 'strict', path: '/api/auth/refresh' });
-    return { accessToken: result.accessToken, user: result.user };
+    return { accessToken: result.accessToken, refreshToken: result.refreshToken, user: result.user };
   });
 
   // Refresh token
@@ -34,7 +34,7 @@ async function routes(fastify) {
     if (!token) return reply.status(400).send({ error: 'Refresh token required' });
     const tokens = await service.refreshTokens(token, req.ip);
     reply.setCookie('refreshToken', tokens.refreshToken, { httpOnly: true, secure: false, sameSite: 'strict', path: '/api/auth/refresh' });
-    return { accessToken: tokens.accessToken };
+    return { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
   });
 
   // Logout

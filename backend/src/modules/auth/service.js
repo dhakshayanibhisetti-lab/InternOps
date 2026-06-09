@@ -1,4 +1,5 @@
-﻿const repo = require('./repository');
+const { UnauthorizedError } = require('../../utils/errors');
+const repo = require('./repository');
 const { generateAccessToken, generateRefreshToken, hashToken, verifyRefreshToken } = require('../../utils/tokens');
 const { createAuditLog } = require('../../utils/audit');
 const { recordLoginAttempt } = require('../../middleware/bruteForce');
@@ -22,12 +23,12 @@ async function login(email, password, ip, userAgent) {
   const user = await repo.findByEmail(email);
   if (!user || user.suspended) {
     await recordLoginAttempt(email, ip, false);
-    throw new Error('Invalid credentials or suspended');
+    throw new UnauthorizedError('Invalid credentials or suspended');
   }
   const valid = await repo.verifyPassword(user, password);
   if (!valid) {
     await recordLoginAttempt(email, ip, false);
-    throw new Error('Invalid credentials');
+    throw new UnauthorizedError('Invalid credentials');
   }
   await recordLoginAttempt(email, ip, true);
   const access = generateAccessToken(user);
@@ -44,14 +45,14 @@ async function login(email, password, ip, userAgent) {
 
 async function refreshTokens(token, ip) {
   let decoded;
-  try { decoded = verifyRefreshToken(token); } catch { throw new Error('Invalid refresh token'); }
+  try { decoded = verifyRefreshToken(token); } catch { throw new UnauthorizedError('Invalid refresh token'); }
   const hash = hashToken(token);
   const pool = require('../../config/db');
   const { rows } = await pool.query('SELECT * FROM refresh_tokens WHERE token_hash=$1 AND revoked=FALSE AND expires_at>NOW()', [hash]);
-  if(rows.length===0) throw new Error('Token revoked/expired');
+  if(rows.length===0) throw new UnauthorizedError('Token revoked/expired');
   await repo.revokeRefreshTokenRedis(hash);
   const user = await repo.findById(decoded.id);
-  if(!user||user.suspended) throw new Error('User not found/suspended');
+  if(!user||user.suspended) throw new UnauthorizedError('User not found/suspended');
   const newAccess = generateAccessToken(user);
   const newRefresh = generateRefreshToken(user);
   const newExpiry = new Date(Date.now()+7*24*60*60*1000);

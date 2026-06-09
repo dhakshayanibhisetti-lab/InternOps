@@ -1,4 +1,5 @@
-﻿const repo = require('./resetRepository');
+const { BadRequestError } = require('../../utils/errors');
+const repo = require('./resetRepository');
 const userRepo = require('./repository');
 const emailService = require('../../services/email');
 const { createAuditLog, extractRequestInfo } = require('../../utils/audit');
@@ -23,7 +24,7 @@ async function forgotPassword(email, requestInfo) {
 
 async function resetPassword(token, newPassword, requestInfo) {
   const record = await repo.verifyResetToken(token);
-  if (!record) throw new Error('Invalid or expired reset token');
+  if (!record) throw new BadRequestError('Invalid or expired reset token');
   await repo.updateUserPassword(record.user_id, newPassword);
   await repo.markTokenUsed(token);
   await createAuditLog({

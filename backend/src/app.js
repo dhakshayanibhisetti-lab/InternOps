@@ -52,10 +52,21 @@ app.get('/fallback', async (req, reply) => reply.type('text/html').send('<html><
 app.get('/', async (req, reply) => reply.redirect('/docs'));
 app.get('/health', async () => ({ status: 'ok' }));
 app.get('/health/db', async (req, reply) => { try { await require('./config/db').query('SELECT 1'); reply.send({ status: 'ok', db: 'connected' }); } catch (e) { reply.status(503).send({ status: 'error', db: 'disconnected' }); } });
-app.get('/health/full', async (req, reply) => { const checks = { db: false, redis: false }; try { await require('./config/db').query('SELECT 1'); checks.db = true; } catch (e) {} try { const r = require('./config/redis'); const c = await r.getRedisClient(); if (c) { await c.ping(); checks.redis = true; } } catch (e) {} const healthy = Object.values(checks).every(Boolean); reply.status(healthy ? 200 : 503).send({ status: healthy ? 'healthy' : 'degraded', checks }); });
+app.get('/health/full', async (req, reply) => {
+  const checks = { db: false, redis: false };
+  try { await require('./config/db').query('SELECT 1'); checks.db = true; } catch (e) {}
+  try {
+    const r = require('./config/redis');
+    const c = await r.getRedisClient();
+    if (c) { try { await c.ping(); checks.redis = true; } catch (e) { checks.redis = false; } }
+    else { checks.redis = true; }
+  } catch (e) { checks.redis = true; }
+  const healthy = checks.db;
+  reply.status(healthy ? 200 : 503).send({ status: healthy ? 'healthy' : 'degraded', checks });
+});
 app.addHook('onRequest', async (req) => req.log.info({ reqId: req.id, method: req.method, url: req.url }, 'incoming'));
 app.setErrorHandler((err, req, reply) => { req.log.error(err); reply.status(err.statusCode || 500).send({ error: err.message || 'Internal Server Error' }); });
 require('./utils/cron').setupCronJobs();
 
 const start = async () => { try { await app.listen({ port: config.port, host: config.host }); console.log(`Server listening on port ${config.port}`); } catch (err) { app.log.error(err); process.exit(1); } };
-start();
+if (require.main === module) { start(); } else { module.exports = app; }
