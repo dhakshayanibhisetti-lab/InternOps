@@ -22,7 +22,7 @@ async function getUserSessions(userId) {
         sessions.push({
           // In Redis mode the hash IS the session identifier (no UUID row).
           sessionId: hash,
-          createdAt: null,                            // not stored in Redis
+          createdAt: null, // not stored in Redis
           expiresAt: new Date(Date.now() + ttl * 1000),
         });
       } else {
