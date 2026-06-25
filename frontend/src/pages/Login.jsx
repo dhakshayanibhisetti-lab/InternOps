@@ -28,7 +28,8 @@ export default function Login() {
       if (message === 'Invalid credentials') {
         setError('Invalid credentials. Please check your email and password.');
       } else if (
-        message === 'Account temporarily locked due to too many failed attempts. Please try again later.' ||
+        message ===
+          'Account temporarily locked due to too many failed attempts. Please try again later.' ||
         (message && message.toLowerCase().includes('locked'))
       ) {
         setError('Account temporarily locked. Please try again later.');
