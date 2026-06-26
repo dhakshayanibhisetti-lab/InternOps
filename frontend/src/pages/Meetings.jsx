@@ -13,6 +13,39 @@ import {
   Badge,
 } from '../components/ui';
 
+function formatMeetingDate(dateStr) {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // 0-indexed
+    const day = parseInt(parts[2], 10);
+    const date = new Date(year, month, day);
+    return date.toLocaleDateString(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
+  }
+  return new Date(dateStr).toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+function formatTime12h(timeStr) {
+  if (!timeStr) return '';
+  const parts = timeStr.split(':');
+  if (parts.length < 2) return timeStr;
+  let hours = parseInt(parts[0], 10);
+  const minutes = parts[1];
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12; // conversion for 0 to 12
+  return `${hours}:${minutes} ${ampm}`;
+}
+
 export default function Meetings() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
@@ -30,7 +63,7 @@ export default function Meetings() {
 
   const { data: meetings, isLoading } = useQuery({
     queryKey: ['meetings'],
-    queryFn: () => api.get('/meetings').then((res) => res.data),
+    queryFn: () => api.get('/meetings').then((res) => res.data.data || []),
   });
   const { data: team = [] } = useQuery({
     queryKey: ['teamMembers'],
@@ -177,11 +210,10 @@ export default function Meetings() {
                       type="button"
                       key={m.id}
                       onClick={() => toggle(m.id)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                        attendees.includes(m.id)
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${attendees.includes(m.id)
                           ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-600/20 ring-offset-1'
                           : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-300 hover:bg-blue-50'
-                      }`}
+                        }`}
                     >
                       {m.full_name || m.email}
                     </button>
@@ -235,14 +267,7 @@ export default function Meetings() {
                     </h3>
                     <div className="mt-1">
                       <Badge color="blue" className="font-medium">
-                        {new Date(m.meeting_date).toLocaleDateString(
-                          undefined,
-                          {
-                            weekday: 'short',
-                            month: 'short',
-                            day: 'numeric',
-                          }
-                        )}
+                        {formatMeetingDate(m.meeting_date)}
                       </Badge>
                     </div>
                   </div>
@@ -263,11 +288,10 @@ export default function Meetings() {
                   {m.description}
                 </p>
               )}
-
               <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 mt-4 pt-4 border-t border-gray-50">
                 <Clock className="w-3.5 h-3.5 text-gray-400" />
-                {m.start_time || 'TBD'}
-                {m.end_time ? ` – ${m.end_time}` : ''}
+                {m.startTime || m.start_time ? formatTime12h(m.startTime || m.start_time) : 'TBD'}
+                {(m.endTime || m.end_time) ? ` – ${formatTime12h(m.endTime || m.end_time)}` : ''}
               </div>
             </Card>
           ))}
