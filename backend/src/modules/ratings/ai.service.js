@@ -92,7 +92,7 @@ async function generateRatingSuggestion(data) {
   try {
     // Perform external AI vendor API request
     result = await model.generateContent(prompt);
-    
+
     // Log latency to tracking system
     const duration = Date.now() - start;
     if (typeof metrics.recordLatency === 'function') {
@@ -100,7 +100,10 @@ async function generateRatingSuggestion(data) {
     }
 
     // Capture token billing counts from Google Gemini response objects
-    if (result?.response?.usageMetadata?.totalTokenCount && typeof metrics.recordTokenUsage === 'function') {
+    if (
+      result?.response?.usageMetadata?.totalTokenCount &&
+      typeof metrics.recordTokenUsage === 'function'
+    ) {
       metrics.recordTokenUsage(result.response.usageMetadata.totalTokenCount);
     }
   } catch (err) {
