@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import { clearCsrfToken, registerAuthStore } from '../lib/axios';
 
+// Hydrate from localStorage so a refresh keeps the session.
+// We defer the read so it always runs inside a browser context and
+// can never crash module import in environments without localStorage
+// (SSR, tests, locked-down sandboxes, etc.).
+let hasStorageError = false;
+
 // User metadata may be cached for lightweight UI bootstrapping, but the
 // access token must never be persisted in localStorage. Keeping the access
 // token memory-only reduces the impact of XSS because there is no
@@ -13,8 +19,20 @@ function safeGet(key) {
     return typeof window !== 'undefined'
       ? window.localStorage.getItem(key)
       : null;
-  } catch {
-    return null;
+  } catch (err) {
+    console.warn(
+      `[localStorage] Failed to read key "${key}", falling back to sessionStorage:`,
+      err
+    );
+    hasStorageError = true;
+    try {
+      return typeof window !== 'undefined'
+        ? window.sessionStorage.getItem(key)
+        : null;
+    } catch (sessErr) {
+      console.warn(`[sessionStorage] Failed to read key "${key}":`, sessErr);
+      return null;
+    }
   }
 }
 
@@ -27,8 +45,21 @@ function safeSet(key, value) {
     } else {
       window.localStorage.setItem(key, value);
     }
-  } catch {
-    /* storage may be disabled — fall through */
+  } catch (err) {
+    console.warn(
+      `[localStorage] Failed to write key "${key}", falling back to sessionStorage:`,
+      err
+    );
+    hasStorageError = true;
+    try {
+      if (value === null || value === undefined) {
+        window.sessionStorage.removeItem(key);
+      } else {
+        window.sessionStorage.setItem(key, value);
+      }
+    } catch (sessErr) {
+      console.warn(`[sessionStorage] Failed to write key "${key}":`, sessErr);
+    }
   }
 }
 
@@ -73,6 +104,7 @@ const useAuthStore = create((set) => ({
   // hydrated stays false until the server-side /auth/refresh call in App.jsx
   // completes. Private and RoleGuard render nothing while hydrated is false.
   hydrated: false,
+  storageError: hasStorageError,
 
   setAuth: ({ accessToken, user }) =>
     set((prev) => {
@@ -97,6 +129,7 @@ const useAuthStore = create((set) => ({
       return {
         accessToken: nextToken,
         user: nextUser,
+        storageError: hasStorageError,
       };
     }),
 
@@ -107,11 +140,7 @@ const useAuthStore = create((set) => ({
     safeRemove('accessToken');
     safeSet('user', null);
     clearCsrfToken();
-
-    set({
-      accessToken: null,
-      user: null,
-    });
+    set({ accessToken: null, user: null, storageError: hasStorageError });
   },
 }));
 
