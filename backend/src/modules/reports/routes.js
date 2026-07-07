@@ -46,7 +46,7 @@ async function routes(fastify) {
       },
     },
     async (req, reply) => {
-     const range = parseDateRange(req.query);
+      const range = parseDateRange(req.query);
       return repo.attendanceSummaryByRole(range.from, range.to);
     }
   );
