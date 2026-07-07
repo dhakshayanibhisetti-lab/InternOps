@@ -1,5 +1,6 @@
 ﻿const { Server } = require('socket.io');
 const config = require('./config');
+const { verifyAccessToken } = require('./utils/tokens');
 
 let io = null;
 
@@ -10,17 +11,21 @@ function initializeWebSocket(server) {
       credentials: true,
     },
   });
+
+  io.use((socket, next) => {
+    try {
+      const token = socket.handshake.auth.token;
+      if (!token) return next(new Error('Authentication error'));
+      const decoded = verifyAccessToken(token);
+      socket.userId = decoded.id;
+      next();
+    } catch {
+      next(new Error('Authentication error'));
+    }
+  });
+
   io.on('connection', (socket) => {
-    console.log('Client connected:', socket.id);
-    socket.on('authenticate', (token) => {
-      // verify JWT and join user room
-      try {
-        const { verifyAccessToken } = require('./utils/tokens');
-        const decoded = verifyAccessToken(token);
-        socket.join(`user_${decoded.id}`);
-        socket.userId = decoded.id;
-      } catch (err) {}
-    });
+    socket.join(`user_${socket.userId}`);
     socket.on('disconnect', () => {
       console.log('Client disconnected:', socket.id);
     });

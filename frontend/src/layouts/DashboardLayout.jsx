@@ -25,6 +25,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import api from '../lib/axios';
+import { connectSocket, disconnectSocket } from '../lib/socket';
 import { UserAvatar, ConfirmationModal } from '../components/ui';
 import useAuthStore from '../store/auth';
 import { QUERY_KEYS } from '../constants/queryKeys';
@@ -115,6 +116,12 @@ export default function DashboardLayout() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const accessToken = useAuthStore((s) => s.accessToken);
+
+  useEffect(() => {
+    if (accessToken) connectSocket(accessToken);
+    return () => disconnectSocket();
+  }, [accessToken]);
 
   const role = user?.role;
   const SIDEBAR_KEY = `sidebar_scroll_${window.location.pathname}`;

@@ -39,7 +39,7 @@ module.exports = {
     // production so local/CI keep working; production must set JWT_REFRESH_SECRET
     // (enforced by validateEnv).
     refreshSecret: resolveRefreshSecret(),
-    accessExpiry: '15m',
+    accessExpiry: process.env.JWT_ACCESS_EXPIRES_IN || '15m',
     refreshExpiry: process.env.JWT_EXPIRES_IN || '7d',
   },
   apiKey: process.env.API_KEY,
