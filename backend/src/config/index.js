@@ -1,4 +1,11 @@
 require('dotenv').config();
+const pino = require('pino');
+
+const log = pino(
+  process.env.NODE_ENV === 'development'
+    ? { transport: { target: 'pino-pretty' } }
+    : {}
+);
 
 function buildRedisUrl() {
   const restUrl = process.env.UPSTASH_REDIS_REST_URL;
@@ -16,8 +23,8 @@ function resolveRefreshSecret() {
   // validateEnv before we get here; outside production fall back to a derived
   // value so dev/CI keep functioning, with a warning.
   if (process.env.NODE_ENV !== 'test') {
-    console.warn(
-      '⚠️ JWT_REFRESH_SECRET is not set; using a derived fallback. Set an independent JWT_REFRESH_SECRET (required in production).'
+    log.warn(
+      'JWT_REFRESH_SECRET is not set; using a derived fallback. Set an independent JWT_REFRESH_SECRET (required in production).'
     );
   }
   return process.env.JWT_SECRET
@@ -33,14 +40,11 @@ module.exports = {
   dbPoolMax: parseInt(process.env.DB_POOL_MAX, 10) || 20,
   jwt: {
     secret: process.env.JWT_SECRET,
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
     accessSecret: process.env.JWT_SECRET,
-    // Independent refresh secret. Falls back to a derived value only outside
-    // production so local/CI keep working; production must set JWT_REFRESH_SECRET
-    // (enforced by validateEnv).
     refreshSecret: resolveRefreshSecret(),
     accessExpiry: process.env.JWT_ACCESS_EXPIRES_IN || '15m',
-    refreshExpiry: process.env.JWT_EXPIRES_IN || '7d',
+    refreshExpiry:
+      process.env.JWT_REFRESH_EXPIRES_IN || process.env.JWT_EXPIRES_IN || '7d',
   },
   apiKey: process.env.API_KEY,
   uploadDir: process.env.UPLOAD_DIR || 'uploads',
