@@ -2,6 +2,7 @@ const pool = require('../config/db');
 
 async function dbTx(fn) {
   const client = await pool.connect();
+  let destroyClient = false;
 
   try {
     await client.query('BEGIN');
@@ -12,17 +13,21 @@ async function dbTx(fn) {
 
     return result;
   } catch (err) {
-    await client.query('ROLLBACK').catch((rbErr) => {
-      console.error('[dbTx] ROLLBACK failed:', rbErr.message);
-    });
+    try {
+      await client.query('ROLLBACK');
+    } catch (rollbackErr) {
+      destroyClient = true;
+    }
+
     throw err;
   } finally {
-    client.release();
+    client.release(destroyClient);
   }
 }
 
 async function withHierarchyTx(userIdsToLock, fn) {
   const client = await pool.connect();
+  let destroyClient = false;
 
   try {
     await client.query('BEGIN');
@@ -42,13 +47,14 @@ async function withHierarchyTx(userIdsToLock, fn) {
 
     return result;
   } catch (err) {
-    await client.query('ROLLBACK').catch((rbErr) => {
-      console.error('[dbTx] ROLLBACK failed:', rbErr.message);
-    });
+    try {
+      await client.query('ROLLBACK');
+    } catch (rollbackErr) {
+      destroyClient = true;
+    }
+
     throw err;
   } finally {
-    client.release();
+    client.release(destroyClient);
   }
 }
-
-module.exports = { dbTx, withHierarchyTx };
