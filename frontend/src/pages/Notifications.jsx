@@ -16,6 +16,7 @@ import {
   EmptyState,
   Spinner,
   ConfirmationModal,
+  ApiErrorState,
 } from '../components/ui';
 
 function timeAgo(d) {
@@ -31,7 +32,7 @@ export default function Notifications() {
   const [page, setPage] = useState(1);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['notifications', page],
     queryFn: () =>
       api.get(`/notifications?page=${page}&limit=20`).then((res) => res.data),
@@ -102,7 +103,7 @@ export default function Notifications() {
           </div>
         </div>
 
-        {items.length > 0 && (
+        {items.length > 0 && !isError && (
           <div className="flex items-center gap-2">
             <Btn
               variant="outline"
@@ -131,7 +132,14 @@ export default function Notifications() {
         )}
       </div>
 
-      {isLoading ? (
+      {isError ? (
+        <ApiErrorState
+          error={error}
+          title="Failed to load notifications"
+          fallback="Unable to load notifications. Please try again."
+          onRetry={refetch}
+        />
+      ) : isLoading ? (
         <div className="flex justify-center p-8">
           <Spinner />
         </div>
@@ -206,7 +214,7 @@ export default function Notifications() {
         </div>
       )}
 
-      {data && data.total > data.limit && (
+      {!isError && data && data.total > data.limit && (
         <div className="flex items-center justify-center gap-4 mt-8 pt-4 border-t border-slate-200 dark:border-slate-700">
           <Btn
             variant="outline"
