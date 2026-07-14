@@ -152,19 +152,13 @@ function handleLogout() {
 
       clearCsrfToken();
 
-      try {
-        if (!window.location.pathname.startsWith('/login')) {
-          window.location.href = '/login';
-        }
-      } catch {
-        /* ignore location assignment errors */
+      if (_authStore) {
+        _authStore.getState().logout();
       }
     } else {
-      // If there's no window (SSR), still clear tokens in memory
       clearCsrfToken();
     }
   } catch {
-    /* defensive: ensure logout doesn't throw */
     clearCsrfToken();
   }
 }
@@ -246,26 +240,19 @@ api.interceptors.response.use(
         processQueue(refreshErr);
 
         if (_authStore) {
-          _authStore.getState().logout();
-        } else {
-          removeLegacyAuthStorage();
-          clearCsrfToken();
+  _authStore.getState().logout();
+} else {
+  removeLegacyAuthStorage();
+  clearCsrfToken();
 
-          try {
-            if (typeof window !== 'undefined') {
-              window.localStorage.removeItem('user');
-            }
-          } catch {
-            /* ignore */
-          }
-        }
-
-        if (
-          typeof window !== 'undefined' &&
-          !window.location.pathname.startsWith('/login')
-        ) {
-          window.location.href = '/login';
-        }
+  try {
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem('user');
+    }
+  } catch {
+    /* ignore */
+  }
+}
 
         return Promise.reject(refreshErr);
       } finally {
