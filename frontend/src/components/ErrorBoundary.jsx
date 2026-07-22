@@ -13,12 +13,12 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-  console.error('ErrorBoundary caught an error:', error, errorInfo);
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
 
-  this.setState({ errorInfo });
+    this.setState({ errorInfo });
 
-  reportClientError(error, errorInfo);
-}
+    reportClientError(error, errorInfo);
+  }
 
   handleReload = () => window.location.reload();
 
